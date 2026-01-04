@@ -636,9 +636,62 @@ pub async fn send_command(
             }
         }
     }
-    if command.ends_with(" &&") {
-        command = command.strip_suffix(" &&").unwrap().to_string();
+        fn sanitize_command(c: &str) -> String {
+        // Trim surrounding whitespace first
+        let s = c.trim();
+        // Split on whitespace to avoid touching quoted substrings; operators are separate tokens
+        let mut parts: Vec<&str> = s.split_whitespace().collect();
+
+        // Remove mode instruction tokens (@enter <mode>, @escape)
+        // Note: @enter and mode name are parsed as separate tokens
+        let mut filtered_parts: Vec<&str> = Vec::with_capacity(parts.len());
+        let mut i = 0;
+        while i < parts.len() {
+            let p = parts[i];
+            if p == "@escape" {
+                // Skip @escape token
+                i += 1;
+            } else if p == "@enter" {
+                // Skip @enter and the following mode name
+                i += 2;
+            } else {
+                filtered_parts.push(p);
+                i += 1;
+            }
+        }
+        parts = filtered_parts;
+
+        // Remove leading operator tokens
+        while !parts.is_empty() && (parts[0] == "&&" || parts[0] == "||" || parts[0] == ";") {
+            parts.remove(0);
+        }
+        // Remove trailing operator tokens
+        while !parts.is_empty()
+            && (parts.last() == Some(&"&&") || parts.last() == Some(&"||") || parts.last() == Some(&";"))
+        {
+            parts.pop();
+        }
+        // Collapse consecutive operator tokens
+        let mut new_parts = Vec::with_capacity(parts.len());
+        for p in parts {
+            if !new_parts.is_empty() {
+                let last = *new_parts.last().unwrap();
+                if (last == "&&" || last == "||" || last == ";") && (p == "&&" || p == "||" || p == ";") {
+                    continue;
+                }
+            }
+            new_parts.push(p);
+        }
+        new_parts.join(" ")
     }
+
+    command = sanitize_command(&command);
+    if command.trim().is_empty() {
+        // Nothing to execute after mode instructions
+        return;
+    }
+
+    log::debug!("Final command to execute: {}", command);
 
     match tx.send(command).await {
         Ok(_) => {}
