@@ -636,6 +636,9 @@ pub async fn send_command(
             }
         }
     }
+    // Normalizing command by removing leftover shell operators and mode instruction tokens
+    // that may remain after mode instruction extraction (e.g. leading "&& echo ..." or
+    // "@enter stream && echo ...
         fn sanitize_command(c: &str) -> String {
         // Trim surrounding whitespace first
         let s = c.trim();
