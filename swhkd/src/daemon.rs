@@ -639,14 +639,14 @@ pub async fn send_command(
     // Normalizing command by removing leftover shell operators and mode instruction tokens
     // that may remain after mode instruction extraction (e.g. leading "&& echo ..." or
     // "@enter stream && echo ...
-        fn sanitize_command(c: &str) -> String {
+    fn sanitize_command(c: &str) -> String {
         // Trim surrounding whitespace first
         let s = c.trim();
         // Split on whitespace to avoid touching quoted substrings; operators are separate tokens
         let mut parts: Vec<&str> = s.split_whitespace().collect();
 
         // Remove mode instruction tokens (@enter <mode>, @escape)
-        // Note: @enter and mode name are parsed as separate tokens
+        // @enter and mode name are parsed as separate tokens
         let mut filtered_parts: Vec<&str> = Vec::with_capacity(parts.len());
         let mut i = 0;
         while i < parts.len() {
@@ -670,7 +670,9 @@ pub async fn send_command(
         }
         // Remove trailing operator tokens
         while !parts.is_empty()
-            && (parts.last() == Some(&"&&") || parts.last() == Some(&"||") || parts.last() == Some(&";"))
+            && (parts.last() == Some(&"&&")
+                || parts.last() == Some(&"||")
+                || parts.last() == Some(&";"))
         {
             parts.pop();
         }
@@ -679,7 +681,9 @@ pub async fn send_command(
         for p in parts {
             if !new_parts.is_empty() {
                 let last = *new_parts.last().unwrap();
-                if (last == "&&" || last == "||" || last == ";") && (p == "&&" || p == "||" || p == ";") {
+                if (last == "&&" || last == "||" || last == ";")
+                    && (p == "&&" || p == "||" || p == ";")
+                {
                     continue;
                 }
             }
